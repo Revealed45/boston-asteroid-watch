@@ -1,0 +1,8 @@
+[variables]
+DJANGO_SETTINGS_MODULE = "asteroid_tracker.settings"
+
+[phases.build]
+cmds = ["pip install -r requirements.txt", "python manage.py collectstatic --noinput"]
+
+[start]
+cmd = "gunicorn asteroid_tracker.wsgi:application --bind 0.0.0.0:$PORT"
