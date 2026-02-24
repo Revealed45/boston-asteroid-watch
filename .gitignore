@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+.env
+staticfiles/
+asteroid_cache.json
+db.sqlite3
+*.log
+.DS_Store
