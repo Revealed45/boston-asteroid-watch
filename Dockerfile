@@ -7,8 +7,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN DJANGO_SETTINGS_MODULE=asteroid_tracker.settings python manage.py collectstatic --noinput
-
 ENV DJANGO_SETTINGS_MODULE=asteroid_tracker.settings
 ENV PYTHONUNBUFFERED=1
 
