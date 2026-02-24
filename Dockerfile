@@ -9,8 +9,7 @@ COPY . .
 
 ENV DJANGO_SETTINGS_MODULE=asteroid_tracker.settings
 ENV PYTHONUNBUFFERED=1
-ENV PORT=8000
 
 EXPOSE 8000
 
-CMD ["/bin/bash", "start.sh"]
+CMD ["gunicorn", "asteroid_tracker.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "2"]
