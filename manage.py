@@ -14,3 +14,11 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+# Railway Nixpacks needs this to detect Django
+application = None
+try:
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'asteroid_tracker.settings')
+    from asteroid_tracker.wsgi import application
+except Exception:
+    pass

@@ -1,8 +1,15 @@
-[variables]
-DJANGO_SETTINGS_MODULE = "asteroid_tracker.settings"
+[phases.setup]
+nixPkgs = ["python311", "python311Packages.pip"]
+
+[phases.install]
+cmds = ["pip install -r requirements.txt"]
 
 [phases.build]
-cmds = ["pip install -r requirements.txt", "python manage.py collectstatic --noinput"]
+cmds = ["python manage.py collectstatic --noinput"]
+
+[variables]
+DJANGO_SETTINGS_MODULE = "asteroid_tracker.settings"
+PYTHONPATH = "."
 
 [start]
-cmd = "gunicorn asteroid_tracker.wsgi:application --bind 0.0.0.0:$PORT"
+cmd = "gunicorn asteroid_tracker.wsgi:application --bind 0.0.0.0:$PORT --workers 2"
