@@ -10,6 +10,4 @@ COPY . .
 ENV DJANGO_SETTINGS_MODULE=asteroid_tracker.settings
 ENV PYTHONUNBUFFERED=1
 
-EXPOSE 8000
-
 CMD ["python", "server.py"]

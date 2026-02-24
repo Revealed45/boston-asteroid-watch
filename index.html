@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Boston Asteroid Watch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Barlow+Condensed:wght@300;400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy:   #0a1628;
+      --blue:   #0d3270;
+      --mid:    #1a56b0;
+      --sky:    #2e86de;
+      --red:    #c0392b;
+      --crimson:#e63946;
+      --white:  #f8f9ff;
+      --offwhite: #e8ecf4;
+      --gold:   #f4d03f;
+      --glow:   rgba(46,134,222,0.35);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Barlow', sans-serif;
+      background: var(--navy);
+      color: var(--white);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ===== STARFIELD ===== */
+    #starfield {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+    #starfield canvas { width: 100%; height: 100%; }
+
+    /* ===== LAYOUT ===== */
+    .page {
+      position: relative;
+      z-index: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px 80px;
+    }
+
+    /* ===== HEADER ===== */
+    header {
+      text-align: center;
+      padding: 52px 0 36px;
+      position: relative;
+    }
+    .header-stripe {
+      position: absolute;
+      top: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 200vw;
+      height: 4px;
+      background: linear-gradient(90deg, var(--red), var(--sky), var(--red));
+      animation: stripeShift 6s linear infinite;
+    }
+    @keyframes stripeShift {
+      0%   { background-position: 0% 50%; }
+      100% { background-position: 200% 50%; }
+    }
+    .shield-icon {
+      display: inline-block;
+      font-size: 2.8rem;
+      margin-bottom: 12px;
+      animation: pulse 3s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1);   opacity: 1; }
+      50%       { transform: scale(1.07); opacity: 0.85; }
+    }
+    .site-title {
+      font-family: 'Orbitron', monospace;
+      font-size: clamp(1.9rem, 5vw, 3.2rem);
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, var(--white) 0%, var(--sky) 50%, var(--crimson) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.1;
+    }
+    .site-subtitle {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 300;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--offwhite);
+      opacity: 0.7;
+      margin-top: 10px;
+    }
+    .location-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(46,134,222,0.15);
+      border: 1px solid rgba(46,134,222,0.4);
+      border-radius: 50px;
+      padding: 5px 16px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.85rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--sky);
+      margin-top: 18px;
+    }
+
+    /* ===== META BAR ===== */
+    .meta-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      background: rgba(13,50,112,0.55);
+      border: 1px solid rgba(46,134,222,0.25);
+      border-radius: 12px;
+      padding: 14px 22px;
+      margin-bottom: 32px;
+      backdrop-filter: blur(10px);
+    }
+    .meta-item {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.82rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--offwhite);
+      opacity: 0.75;
+    }
+    .meta-item strong {
+      color: var(--sky);
+      font-weight: 700;
+      opacity: 1;
+    }
+
+    /* ===== REFRESH BUTTON ===== */
+    .refresh-btn {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, var(--red), var(--crimson));
+      color: var(--white);
+      border: none;
+      border-radius: 8px;
+      padding: 10px 22px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 18px rgba(198,57,43,0.4);
+    }
+    .refresh-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px rgba(198,57,43,0.6);
+    }
+    .refresh-btn:active { transform: translateY(0); }
+    .refresh-btn.loading {
+      pointer-events: none;
+      opacity: 0.7;
+    }
+    .spin {
+      display: inline-block;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===== ERROR BOX ===== */
+    .error-box {
+      background: rgba(198,57,43,0.15);
+      border: 1px solid var(--crimson);
+      border-radius: 10px;
+      padding: 18px 22px;
+      margin-bottom: 28px;
+      font-size: 0.9rem;
+      color: #ffaaaa;
+    }
+
+    /* ===== ASTEROID CARDS ===== */
+    .cards-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .asteroid-card {
+      background: rgba(13,50,112,0.4);
+      border: 1px solid rgba(46,134,222,0.2);
+      border-radius: 16px;
+      padding: 24px 28px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 0 24px;
+      align-items: start;
+      backdrop-filter: blur(8px);
+      transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
+      animation: cardIn 0.5s ease both;
+    }
+    .asteroid-card:nth-child(1) { animation-delay: 0.05s; }
+    .asteroid-card:nth-child(2) { animation-delay: 0.12s; }
+    .asteroid-card:nth-child(3) { animation-delay: 0.19s; }
+    .asteroid-card:nth-child(4) { animation-delay: 0.26s; }
+    .asteroid-card:nth-child(5) { animation-delay: 0.33s; }
+
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(22px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .asteroid-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(46,134,222,0.5);
+      box-shadow: 0 8px 32px rgba(46,134,222,0.15);
+    }
+    .asteroid-card.hazardous {
+      border-color: rgba(230,57,70,0.4);
+    }
+    .asteroid-card.hazardous:hover {
+      border-color: rgba(230,57,70,0.75);
+      box-shadow: 0 8px 32px rgba(230,57,70,0.2);
+    }
+
+    /* Rank badge */
+    .rank {
+      font-family: 'Orbitron', monospace;
+      font-size: 2rem;
+      font-weight: 900;
+      color: rgba(255,255,255,0.12);
+      line-height: 1;
+      min-width: 42px;
+      padding-top: 4px;
+      user-select: none;
+    }
+    .rank.rank-1 { color: var(--crimson); opacity: 0.9; }
+    .rank.rank-2 { color: var(--sky); opacity: 0.7; }
+
+    /* Card body */
+    .card-body {}
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .asteroid-name {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.3rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      color: var(--white);
+    }
+    .tag {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      padding: 3px 9px;
+      border-radius: 50px;
+    }
+    .tag-hazardous {
+      background: rgba(230,57,70,0.2);
+      border: 1px solid var(--crimson);
+      color: var(--crimson);
+    }
+    .tag-safe {
+      background: rgba(46,134,222,0.15);
+      border: 1px solid rgba(46,134,222,0.4);
+      color: var(--sky);
+    }
+    .tag-date {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: var(--offwhite);
+    }
+
+    /* Stats row */
+    .stats-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 28px;
+      margin-top: 12px;
+    }
+    .stat {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .stat-label {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.68rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--offwhite);
+      opacity: 0.55;
+    }
+    .stat-value {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--white);
+    }
+    .stat-value.highlight { color: var(--sky); }
+    .stat-value.danger { color: var(--crimson); }
+
+    /* Threat meter */
+    .threat-col {
+      text-align: center;
+      min-width: 90px;
+    }
+    .threat-score-label {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.65rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--offwhite);
+      opacity: 0.5;
+      margin-bottom: 5px;
+    }
+    .threat-circle {
+      width: 78px;
+      height: 78px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Orbitron', monospace;
+      font-size: 1.15rem;
+      font-weight: 700;
+      position: relative;
+      margin: 0 auto;
+    }
+    .threat-ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 3px solid transparent;
+    }
+    .threat-circle.high  { background: rgba(230,57,70,0.15); color: var(--crimson); }
+    .threat-circle.high .threat-ring  { border-color: var(--crimson); box-shadow: 0 0 14px rgba(230,57,70,0.5); }
+    .threat-circle.mid   { background: rgba(244,208,63,0.1);  color: var(--gold); }
+    .threat-circle.mid .threat-ring   { border-color: var(--gold); }
+    .threat-circle.low   { background: rgba(46,134,222,0.12); color: var(--sky); }
+    .threat-circle.low .threat-ring   { border-color: rgba(46,134,222,0.5); }
+
+    .jpl-link {
+      display: inline-block;
+      margin-top: 12px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--sky);
+      text-decoration: none;
+      opacity: 0.6;
+      transition: opacity 0.2s;
+    }
+    .jpl-link:hover { opacity: 1; }
+
+    /* ===== EMPTY STATE ===== */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      opacity: 0.5;
+    }
+    .empty-state p {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.1rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    /* ===== FOOTER ===== */
+    footer {
+      text-align: center;
+      margin-top: 60px;
+      font-size: 0.75rem;
+      color: var(--offwhite);
+      opacity: 0.35;
+      font-family: 'Barlow Condensed', sans-serif;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    footer a { color: inherit; }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 600px) {
+      .asteroid-card {
+        grid-template-columns: auto 1fr;
+        grid-template-rows: auto auto;
+      }
+      .threat-col {
+        grid-column: 2;
+        grid-row: 2;
+        text-align: left;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 14px;
+      }
+      .threat-circle { width: 56px; height: 56px; font-size: 0.9rem; }
+    }
+
+    /* ===== TOAST ===== */
+    #toast {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      background: var(--blue);
+      border: 1px solid var(--sky);
+      border-radius: 10px;
+      padding: 12px 20px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.9rem;
+      letter-spacing: 0.08em;
+      color: var(--white);
+      z-index: 999;
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      pointer-events: none;
+    }
+    #toast.show { transform: translateY(0); opacity: 1; }
+    #toast.error { border-color: var(--crimson); background: rgba(198,57,43,0.3); }
+  </style>
+</head>
+<body>
+
+<div id="starfield"><canvas id="stars"></canvas></div>
+
+<div class="page">
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-stripe"></div>
+    <div class="shield-icon">☄️</div>
+    <h1 class="site-title">Boston Asteroid Watch</h1>
+    <p class="site-subtitle">Near Earth Object Threat Monitor</p>
+    <div class="location-badge">
+      📍 Boston, MA — 42.3601°N, 71.0589°W
+    </div>
+  </header>
+
+  <!-- META BAR -->
+  <div class="meta-bar">
+    <div class="meta-item">
+      Data Date: <strong id="dataDate">{{ data.date|default:"—" }}</strong>
+    </div>
+    <div class="meta-item">
+      Last Fetched: <strong id="fetchedAt">{{ data.fetched_at|default:"—" }}</strong>
+    </div>
+    <div class="meta-item">
+      NEOs Scanned: <strong id="totalNeos">{{ data.total_neos_scanned|default:"—" }}</strong>
+    </div>
+    <button class="refresh-btn" id="refreshBtn" onclick="refreshData()">
+      <span id="refreshBtnText">⟳ &nbsp;Refresh Data</span>
+    </button>
+  </div>
+
+  <!-- ERROR -->
+  {% if error %}
+  <div class="error-box">
+    ⚠️ &nbsp;API Error: {{ error }}
+  </div>
+  {% endif %}
+
+  <!-- CARDS -->
+  <div class="cards-grid" id="cardsGrid">
+    {% if data and data.asteroids %}
+      {% for asteroid in data.asteroids %}
+      {% with forloop.counter as rank %}
+      <div class="asteroid-card {% if asteroid.is_hazardous %}hazardous{% endif %}">
+
+        <div class="rank rank-{{ rank }}">{{ rank }}</div>
+
+        <div class="card-body">
+          <div class="card-header">
+            <span class="asteroid-name">{{ asteroid.name }}</span>
+            {% if asteroid.is_hazardous %}
+            <span class="tag tag-hazardous">⚠ Hazardous</span>
+            {% else %}
+            <span class="tag tag-safe">✓ Non-Hazardous</span>
+            {% endif %}
+            <span class="tag tag-date">{{ asteroid.approach_date }}</span>
+          </div>
+
+          <div class="stats-row">
+            <div class="stat">
+              <span class="stat-label">Miss Distance</span>
+              <span class="stat-value highlight">{{ asteroid.miss_distance_km|floatformat:0 }} km</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Lunar Distance</span>
+              <span class="stat-value">{{ asteroid.miss_distance_lunar|floatformat:2 }} LD</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Velocity</span>
+              <span class="stat-value">{{ asteroid.velocity_kms|floatformat:2 }} km/s</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Est. Diameter</span>
+              <span class="stat-value {% if asteroid.diameter_avg_m > 200 %}danger{% endif %}">
+                {{ asteroid.diameter_min_m|floatformat:0 }}–{{ asteroid.diameter_max_m|floatformat:0 }} m
+              </span>
+            </div>
+          </div>
+
+          <a class="jpl-link" href="{{ asteroid.nasa_jpl_url }}" target="_blank" rel="noopener">
+            → View on NASA JPL ↗
+          </a>
+        </div>
+
+        <div class="threat-col">
+          <div class="threat-score-label">Threat Score</div>
+          {% with asteroid.threat_score as score %}
+          <div class="threat-circle {% if score >= 50 %}high{% elif score >= 25 %}mid{% else %}low{% endif %}">
+            <div class="threat-ring"></div>
+            {{ score|floatformat:0 }}
+          </div>
+          {% endwith %}
+        </div>
+
+      </div>
+      {% endwith %}
+      {% endfor %}
+    {% else %}
+    <div class="empty-state">
+      <p>No asteroid data loaded yet.<br>Click "Refresh Data" to fetch from NASA.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <footer>
+    Data sourced from <a href="https://api.nasa.gov" target="_blank">NASA NeoWs API</a> &nbsp;·&nbsp;
+    Threat score = proximity + size + hazard classification &nbsp;·&nbsp;
+    Not an official NASA product
+  </footer>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+  // ===== STARFIELD =====
+  (function() {
+    const canvas = document.getElementById('stars');
+    const ctx = canvas.getContext('2d');
+    let stars = [];
+
+    function resize() {
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+
+    function init() {
+      stars = [];
+      for (let i = 0; i < 220; i++) {
+        stars.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          r: Math.random() * 1.5,
+          a: Math.random(),
+          da: (Math.random() - 0.5) * 0.005,
+        });
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      stars.forEach(s => {
+        s.a = Math.max(0.1, Math.min(1, s.a + s.da));
+        if (s.a <= 0.1 || s.a >= 1) s.da *= -1;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${s.a})`;
+        ctx.fill();
+      });
+      requestAnimationFrame(draw);
+    }
+
+    window.addEventListener('resize', () => { resize(); init(); });
+    resize();
+    init();
+    draw();
+  })();
+
+  // ===== REFRESH =====
+  function showToast(msg, isError) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'show' + (isError ? ' error' : '');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.className = ''; }, 3200);
+  }
+
+  function refreshData() {
+    const btn = document.getElementById('refreshBtn');
+    const txt = document.getElementById('refreshBtnText');
+    btn.classList.add('loading');
+    txt.innerHTML = '<span class="spin">⟳</span> &nbsp;Fetching…';
+
+    fetch('/api/refresh/', { method: 'POST', headers: { 'X-CSRFToken': getCookie('csrftoken') } })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          showToast('✓  Data updated — reloading…');
+          setTimeout(() => location.reload(), 900);
+        } else {
+          showToast('⚠  Error: ' + data.error, true);
+          btn.classList.remove('loading');
+          txt.innerHTML = '⟳ &nbsp;Refresh Data';
+        }
+      })
+      .catch(err => {
+        showToast('⚠  Network error', true);
+        btn.classList.remove('loading');
+        txt.innerHTML = '⟳ &nbsp;Refresh Data';
+      });
+  }
+
+  function getCookie(name) {
+    let v = null;
+    document.cookie.split(';').forEach(c => {
+      c = c.trim();
+      if (c.startsWith(name + '=')) v = decodeURIComponent(c.split('=')[1]);
+    });
+    return v;
+  }
+</script>
+</body>
+</html>

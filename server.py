@@ -1,19 +1,14 @@
 import os
-import subprocess
-import sys
+import django
+from django.core.management import call_command
 
-port = os.environ.get("PORT", "8000")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "asteroid_tracker.settings")
+django.setup()
 
-# Strip anything that isn't a number
-port = ''.join(filter(str.isdigit, str(port)))
-if not port:
-    port = "8000"
+port = os.environ.get("PORT", "8000").strip()
+try:
+    port = int(port)
+except ValueError:
+    port = 8000
 
-os.environ["DJANGO_SETTINGS_MODULE"] = "asteroid_tracker.settings"
-
-subprocess.run([
-    sys.executable, "-m", "gunicorn",
-    "asteroid_tracker.wsgi:application",
-    "--bind", f"0.0.0.0:{port}",
-    "--workers", "2"
-])
+call_command("runserver", f"0.0.0.0:{port}", "--noreload")
